@@ -1,12 +1,12 @@
 import pika
 import sys
 import threading
-from room_manager import create_room
+
 
 class ChatRoom:
-    def __init__(self, username, room_name, room_type):
+    def __init__(self, room_name, room_type, room_url):
         self.room_name = room_name
-        self.username = username
+        self.room_url = room_url
         self.room_type = room_type  # direct (for private messages), fanout(for public messages eg. groups)
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(host='localhost'))
@@ -28,39 +28,46 @@ class ChatRoom:
         print(f" [*] Waiting for messages in room {self.room_name}")
         self.channel.start_consuming()
         
+    def broadcast(self, message):
+        return message
+        
+        
     def callback(self, ch, method, properties, body):
         sys.stdout.write("\033[K")
         print(f'\r [x] Received: {body.decode()}')
-        sys.stdout.write(f"{self.username}> ")
+        self.broadcast(body.decode())
         sys.stdout.flush()
         
     def close(self):
         self.connection.close()
     
+    def display_room(self):
+        return {
+            'room':self.room_name,
+            'type':self.room_type,
+            'url':self.room_url
+        }
+        
 if __name__ == "__main__":
-    room_name = input("Enter room name: ")
-    room_type = input("Enter room type: ")
-    username = input("Enter a username: ")
     
-    chat_room = create_room(username, room_name, room_type)
+    chat_room = ChatRoom("try", "direct", "12345")
     
     # Start the consumer thread
     if isinstance(chat_room, str):
         print(chat_room)
         sys.exit(0)
     else:
-        chat_rooms = ChatRoom(chat_room[0], chat_room[1], chat_room[2])
-        print("Room created")
-        cons_thread = threading.Thread(target=chat_rooms.start_consuming)
+        print("....")
+        cons_thread = threading.Thread(target=chat_room.start_consuming)
         cons_thread.start()
 
     # Run the input loop in the main thread
     try:
         while True:
-            msg = input(f"{username}> ")
-            chat_rooms.publish_message(msg)
+            msg = input("admin: ")
+            chat_room.publish_message(msg)
     except KeyboardInterrupt:
         print("Interrupted")
-        chat_rooms.close()
+        chat_room.close()
         cons_thread.join()
         sys.exit(0)

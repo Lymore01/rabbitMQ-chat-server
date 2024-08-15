@@ -1,5 +1,5 @@
 import threading
-from server import ChatRoom
+from src.server.server import ChatRoom
 import sys
 from database.models import Room,Member,session
 
@@ -38,9 +38,6 @@ if __name__ == "__main__":
         rooms = session.query(Room).all()
  
         room_exists = any(room.name == room_name for room in rooms)
-       
-        for room in rooms:
-            print(room.members)
         
         
         if not room_exists:
@@ -48,7 +45,6 @@ if __name__ == "__main__":
             sys.exit(0)
 
         chat_member = ChatMembers(username, room_name, room_type)
-        rooms.members = [Member(name=username)]
         chat_member.join_room()
         
                
